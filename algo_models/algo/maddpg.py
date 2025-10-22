@@ -76,7 +76,8 @@ class MADDPG:
         # the actor loss
         # 重新选择联合动作中当前agent的动作，其他agent的动作不变
         u[self.agent_id] = self.actor_network(o[self.agent_id])
-        actor_loss = -self.critic_network(o, u).mean() #                    # 策略梯度更新
+        actor_loss = -self.critic_network(o, u).mean() # 策略梯度更新
+        print('critic_loss is {}, actor_loss is {}'.format(critic_loss.item(), actor_loss.item()))
         if self.agent_id==0:
             print('critic_loss is {}, actor_loss is {}'.format(critic_loss.item(), actor_loss.item()))
         # update the network

@@ -1,0 +1,19 @@
+# 忽略所有日志文件
+*.log
+
+# 忽略python编译缓存
+__pycache__/
+*.pyc
+
+# 忽略结果文件
+results/
+
+# 忽略vscode配置目录
+.vscode/
+
+# 忽略特定文件
+=1.0
+
+# 忽略其他临时文件
+*.tmp
+*.temp

@@ -15,7 +15,6 @@ from runner import Runner
 def main():
     # load config
     args = load_config()
-    print(torch.cuda.is_available())
 
     random.seed(args['seed'])
     np.random.seed(args['seed'])
