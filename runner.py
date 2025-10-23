@@ -6,6 +6,7 @@ import torch
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from torch.utils.tensorboard.writer import SummaryWriter
 matplotlib.use("Agg")
 
 class Runner:
@@ -23,6 +24,7 @@ class Runner:
         self.save_path = self.args['save_dir'] + '/' + self.args['scenario_name'] + '_' + self.str_time
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
+        self.eval_step = 0
     def _init_agents(self):
         agents = []
         for i in range(self.args['n_agents']):
@@ -30,7 +32,8 @@ class Runner:
             agents.append(agent)
         return agents
     def run(self):
-        returns = []
+        # returns = []
+        writer = SummaryWriter(self.args['log_dir'])
         for time_step in tqdm(range(self.args['time_steps'])):
             # reset the environment
             if time_step % self.episode_limit == 0:
@@ -46,7 +49,7 @@ class Runner:
                     actions.append(action)
             for _ in range(self.args['n_agents'], self.args['n_players']):
                 actions.append([0, np.random.rand()*2-1, 0, np.random.rand()*2-1, 0])
-            s_next, r, done, info = self.env.step(actions)
+            s_next, r, done, _ = self.env.step(actions)
             # self.buffer[k].store_episode(s[:self.args['n_agents']], u, r[:self.args['n_agents']], s_next[:self.args['n_agents']]) # 增加
             self.buffer.store_episode(s[:self.args['n_agents']], u,
                                          r[:self.args['n_agents']],
@@ -62,22 +65,20 @@ class Runner:
                     agent.learn(transitions, other_agents)
                     # agent.learn(transitions, other_agents, k) # 增加
             if time_step > 0 and time_step % self.args['evaluate_rate'] == 0:
-                returns.append(self.evaluate())
-                # plt.figure()
-                # plt.plot(range(len(returns)), returns)
-                # plt.xlabel('episode *' + str(self.args['evaluate_rate']/self.episode_limit))
-                # plt.ylabel('average returns')
-                # plt.savefig(self.save_path + '/plt.png', format='png')
-            self.noise = max(0.05, self.noise-0.0000005)
-            self.epsilon = max(0.05, self.epsilon - 0.0000005)
-            np.save(self.save_path + '/returns.pkl', returns)
+                eval_avg_reward = self.evaluate()
+                writer.add_scalar('eval_avg_reward', eval_avg_reward, self.eval_step)
+                self.eval_step += 1
+            # self.noise = max(0.05, self.noise-0.0000005)
+            # self.epsilon = max(0.05, self.epsilon - 0.0000005)
+        writer.close()
+            # np.save(self.save_path + '/returns.pkl', returns)
     def evaluate(self):
         returns = []
-        for episode in range(self.args['evaluate_episodes']):
+        for _ in range(self.args['evaluate_episodes']):
             #reset the environment
             s = self.env.reset()
             rewards = 0
-            for time_step in range(self.args['evaluate_episode_len']):
+            for _ in range(self.args['evaluate_episode_len']):
                 # self.env.render()
                 actions = []
                 # k = np.random.randint(0, self.k)  # 增加

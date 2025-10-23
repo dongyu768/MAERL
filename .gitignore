@@ -3,7 +3,8 @@
 
 # 忽略python编译缓存
 __pycache__/
-*.pyc
+*/__pycache__/
+*.*.pyc
 
 # 忽略结果文件
 results/
@@ -17,3 +18,7 @@ results/
 # 忽略其他临时文件
 *.tmp
 *.temp
+envs/multiagent/__pycache__/__init__.cpython-310.pyc
+algo_models/agents/__pycache__/agent.cpython-310.pyc
+algo_models/archs/__pycache__/actor_critic.cpython-310.pyc
+algo_models/algo/__pycache__/maddpg.cpython-310.pyc

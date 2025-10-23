@@ -1,6 +1,7 @@
 import torch
 import os
 from algo_models.archs.actor_critic import Actor, Critic
+from torch.utils.tensorboard.writer import SummaryWriter
 
 class MADDPG:
     def __init__(self, args, agent_id): # 因为不同的agent的obs,act维度可能不一样，所以神经网络不同，需要agent_id来区分
@@ -44,6 +45,7 @@ class MADDPG:
             target_param.data.copy_((1-self.args['tau']) * target_param.data + self.args['tau'] * param.data)
     # update the network
     def train(self, transitions, other_agents):
+        writer = SummaryWriter(self.args['log_dir'])
         for key in transitions.keys():
             transitions[key] = torch.tensor(transitions[key], dtype=torch.float32, device=self.device)
         r = transitions['r_%d' % self.agent_id] # 训练时只需要自己的reward
@@ -62,14 +64,10 @@ class MADDPG:
                     u_next.append(self.actor_target_network(o_next[agent_id]))
                 else:
                     # 因为传入的other_agents要比总数少一个，可能中间某个agent是当前agent，不能遍历去选择动作
-                    u_next = other_agents[index].policy.actor_target_network(o_next[agent_id])
-                    print('生成的其他智能体的动作:', u_next[-1])
-                    if u_next.device != self.device:
-                        u_next = u_next.to(self.device)
-                    u_next.append(u_next)
+                    u_next.append(other_agents[index].policy.actor_target_network(o_next[agent_id]))
                     index += 1
             q_next = self.critic_target_network(o_next, u_next).detach()
-            target_q = (r.unsqueeze(1) + self.args.gamma * q_next).detach()  # 目标值计算
+            target_q = (r.unsqueeze(1) + self.args['gamma'] * q_next).detach()  # 目标值计算
         # the q loss
         q_value = self.critic_network(o, u)
         critic_loss = (target_q - q_value).pow(2).mean()                     # 价值网络损失函数
@@ -77,9 +75,10 @@ class MADDPG:
         # 重新选择联合动作中当前agent的动作，其他agent的动作不变
         u[self.agent_id] = self.actor_network(o[self.agent_id])
         actor_loss = -self.critic_network(o, u).mean() # 策略梯度更新
-        print('critic_loss is {}, actor_loss is {}'.format(critic_loss.item(), actor_loss.item()))
         if self.agent_id==0:
-            print('critic_loss is {}, actor_loss is {}'.format(critic_loss.item(), actor_loss.item()))
+            # print('critic_loss is {}, actor_loss is {}'.format(critic_loss.item(), actor_loss.item()))
+            writer.add_scalar('actor_loss', actor_loss.item(), self.train_step)
+            writer.add_scalar('critic_loss', critic_loss.item(), self.train_step)
         # update the network
         self.actor_optim.zero_grad()
         actor_loss.backward()
@@ -92,6 +91,7 @@ class MADDPG:
         if self.train_step > 0 and self.train_step % self.args['save_rate'] == 0:
             self.save_model(self.train_step)
         self.train_step += 1
+        writer.close()
     def save_model(self, train_step):
         num = str(train_step // self.args['save_rate'])
         model_path = os.path.join(self.args['save_dir'], self.args['scenario_name'])

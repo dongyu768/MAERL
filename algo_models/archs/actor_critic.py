@@ -6,11 +6,11 @@ import torch.nn.functional as F
 class Actor(nn.Module):
     def __init__(self, args, agent_id):
         super(Actor, self).__init__()
-        self.max_action = args.high_action
-        self.fc1 = nn.Linear(args.obs_shape[agent_id], 256)
+        self.max_action = args['high_action']
+        self.fc1 = nn.Linear(args['obs_shape'][agent_id], 256)
         self.fc2 = nn.Linear(256, 256)
         self.fc3 = nn.Linear(256, 256)
-        self.action_out = nn.Linear(256, args.action_shape[agent_id])
+        self.action_out = nn.Linear(256, args['action_shape'][agent_id])
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -21,8 +21,8 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     def __init__(self, args):
         super(Critic, self).__init__()
-        self.max_action = args.high_action
-        self.fc1 = nn.Linear(sum(args.obs_shape)+sum(args.action_shape), 256)
+        self.max_action = args['high_action']
+        self.fc1 = nn.Linear(sum(args['obs_shape'])+sum(args['action_shape']), 256)
         self.fc2 = nn.Linear(256, 256)
         self.fc3 = nn.Linear(256, 256)
         self.q_out = nn.Linear(256, 1)
@@ -41,11 +41,11 @@ class Critic(nn.Module):
 class Approx(nn.Module):
     def __init__(self, args, agent_id):
         super(Approx, self).__init__()
-        self.max_action = args.high_action
-        self.fc1 = nn.Linear(args.obs_shape[agent_id], 64)
+        self.max_action = args['high_action']
+        self.fc1 = nn.Linear(args['obs_shape'][agent_id], 64)
         self.fc2 = nn.Linear(64, 64)
         # self.fc3 = nn.Linear(64, 64)
-        self.action_out = nn.Linear(64, args.action_shape[agent_id])
+        self.action_out = nn.Linear(64, args['action_shape'][agent_id])
     def forward(self, x):
         if not isinstance(x, torch.Tensor):
             x = torch.tensor(x, dtype=torch.float32)  # 确保 x 是 Tensor 类型
