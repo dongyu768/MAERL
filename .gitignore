@@ -22,3 +22,28 @@ envs/multiagent/__pycache__/__init__.cpython-310.pyc
 algo_models/agents/__pycache__/agent.cpython-310.pyc
 algo_models/archs/__pycache__/actor_critic.cpython-310.pyc
 algo_models/algo/__pycache__/maddpg.cpython-310.pyc
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST

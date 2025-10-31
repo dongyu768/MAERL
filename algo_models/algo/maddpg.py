@@ -1,7 +1,7 @@
 import torch
 import os
 from algo_models.archs.actor_critic import Actor, Critic
-from torch.utils.tensorboard.writer import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 class MADDPG:
     def __init__(self, args, agent_id): # 因为不同的agent的obs,act维度可能不一样，所以神经网络不同，需要agent_id来区分
@@ -37,6 +37,7 @@ class MADDPG:
             self.critic_network.load_state_dict(torch.load(self.model_path + '/critic_params.pkl', map_location=self.device))
             print('Agent {} successfully loaded actor_network:{}'.format(self.agent_id, self.model_path + '/actor_params.pkl'))
             print('Agent {} successfully loaded critic_network:{}'.format(self.agent_id, self.model_path + '/critic_params.pkl'))
+        self.writer = SummaryWriter(self.args['log_dir'])
     # soft update
     def _soft_update_target_network(self):
         for target_param, param in zip(self.actor_target_network.parameters(), self.actor_network.parameters()):
@@ -45,9 +46,8 @@ class MADDPG:
             target_param.data.copy_((1-self.args['tau']) * target_param.data + self.args['tau'] * param.data)
     # update the network
     def train(self, transitions, other_agents):
-        writer = SummaryWriter(self.args['log_dir'])
         for key in transitions.keys():
-            transitions[key] = torch.tensor(transitions[key], dtype=torch.float32, device=self.device)
+            transitions[key] = torch.from_numpy(transitions[key]).float().to(self.device)
         r = transitions['r_%d' % self.agent_id] # 训练时只需要自己的reward
         o, u, o_next = [], [], [] # 用来装每个agent经验中的各项
         for agent_id in range(self.args['n_agents']):
@@ -77,8 +77,8 @@ class MADDPG:
         actor_loss = -self.critic_network(o, u).mean() # 策略梯度更新
         if self.agent_id==0:
             # print('critic_loss is {}, actor_loss is {}'.format(critic_loss.item(), actor_loss.item()))
-            writer.add_scalar('actor_loss', actor_loss.item(), self.train_step)
-            writer.add_scalar('critic_loss', critic_loss.item(), self.train_step)
+            self.writer.add_scalar('actor_loss', actor_loss.item(), self.train_step)
+            self.writer.add_scalar('critic_loss', critic_loss.item(), self.train_step)
         # update the network
         self.actor_optim.zero_grad()
         actor_loss.backward()
@@ -91,7 +91,6 @@ class MADDPG:
         if self.train_step > 0 and self.train_step % self.args['save_rate'] == 0:
             self.save_model(self.train_step)
         self.train_step += 1
-        writer.close()
     def save_model(self, train_step):
         num = str(train_step // self.args['save_rate'])
         model_path = os.path.join(self.args['save_dir'], self.args['scenario_name'])

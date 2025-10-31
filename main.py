@@ -14,7 +14,8 @@ from runner import Runner
 
 def main():
     # load config
-    args = load_config()
+    config = load_config()
+    args = config['config']
 
     random.seed(args['seed'])
     np.random.seed(args['seed'])

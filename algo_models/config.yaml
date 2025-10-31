@@ -1,49 +1,50 @@
-# 环境参数
-env_name: multiparticles  # ['multiparticles', 'multidrones']
-scenario_name: "simple_tag"  # ['simple_tag', 'MultiHoverAviary', 'simple_reference','simple_spread', 'simple_world_comm']
-device: 'cuda:0'
-max_episode_len: 25
-time_steps: 20000000    # 2000000
-random_steps: 500
-gui: false
-evaluate: false
-continuous_actions: True
-# 训练通用参数
-epsilon: 0.2
-gamma: 0.95
-tau: 0.01
-batch_size: 256
-buffer_size: 500000
-use_priority: false
-use_normalize: false
-seed: 20
-anneal_lr: false
-torch_deterministic: False
-# 日志参数
-base_path: "results"
-save_rate: 20000
-log_interval: 100
-save_interval: 20000
-save_vedio: False
-learn_interval: 10
-# 评估参数
-evaluate_episodes: 50
-evaluate_episode_len: 25
-evaluate: False
-evaluate_rate: 1000
-demo_length: 100
-# MPE环境参数
-num_good: 1
-num_adversaries: 1
-num_obstacles: 0
-num_food: 2
-num_forests: 2
-# 算法参数
-lr_actor: 0.0001
-lr_critic: 0.001
-noise_rate: 0.1
-exploration_decay: 0.9999
-policy_noise: 0.2
-noise_clip: 0.5
-policy_freq: 2
-ensemble_k: 2
+config:
+  device: 'cuda:0'
+  # 环境参数
+  env_name: multiparticles  # ['multiparticles', 'multidrones']
+  scenario_name: "simple_tag"  # ['simple_tag', 'MultiHoverAviary', 'simple_reference','simple_spread', 'simple_world_comm']
+  max_episode_len: 25
+  time_steps: 2000000    # 200000
+  random_steps: 500 
+  gui: false
+  evaluate: false
+  continuous_actions: True
+  # 训练通用参数
+  epsilon: 0.2
+  gamma: 0.95
+  tau: 0.01
+  batch_size: 256
+  buffer_size: 500000
+  use_priority: false
+  use_normalize: false
+  seed: 20
+  anneal_lr: false
+  torch_deterministic: False
+  # 日志参数
+  base_path: "results"
+  save_rate: 20000
+  log_interval: 100
+  save_interval: 20000
+  save_vedio: False
+  learn_interval: 10
+  # 评估参数
+  evaluate_episodes: 50
+  evaluate_episode_len: 25
+  evaluate: False
+  evaluate_rate: 1000
+  demo_length: 100
+  # MPE环境参数
+  num_good: 1
+  num_adversaries: 1
+  num_obstacles: 0
+  num_food: 2
+  num_forests: 2
+  # 算法参数
+  lr_actor: 0.0001
+  lr_critic: 0.001
+  noise_rate: 0.1
+  exploration_decay: 0.9999
+  policy_noise: 0.2
+  noise_clip: 0.5
+  policy_freq: 2
+  ensemble_k: 2

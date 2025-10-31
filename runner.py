@@ -6,8 +6,7 @@ import torch
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from torch.utils.tensorboard.writer import SummaryWriter
-matplotlib.use("Agg")
+from torch.utils.tensorboard import SummaryWriter
 
 class Runner:
     def __init__(self, args, env):
@@ -60,9 +59,10 @@ class Runner:
                 transitions = self.buffer.sample(self.args['batch_size'])  # 修改
                 # transitions = self.buffer[k].sample(self.args['batch_size'])  # 修改
                 for agent in self.agents:
+                    transitions_t = transitions.copy()
                     other_agents = self.agents.copy()
                     other_agents.remove(agent)
-                    agent.learn(transitions, other_agents)
+                    agent.learn(transitions_t, other_agents)
                     # agent.learn(transitions, other_agents, k) # 增加
             if time_step > 0 and time_step % self.args['evaluate_rate'] == 0:
                 eval_avg_reward = self.evaluate()
@@ -70,7 +70,6 @@ class Runner:
                 self.eval_step += 1
             # self.noise = max(0.05, self.noise-0.0000005)
             # self.epsilon = max(0.05, self.epsilon - 0.0000005)
-        writer.close()
             # np.save(self.save_path + '/returns.pkl', returns)
     def evaluate(self):
         returns = []

@@ -10,7 +10,7 @@ class Buffer:
         # create the buffer to store info
         self.buffer = dict()
         for i in range(self.args['n_agents']):
-            self.buffer['o_%d' % i] = np.empty([self.size, self.args['obs_shape'][i]])
+            self.buffer['o_%d' % i] = np.empty([self.size, self.args['obs_shape'][i]]) # (500000, )
             self.buffer['u_%d' % i] = np.empty([self.size, self.args['action_shape'][i]])
             self.buffer['r_%d' % i] = np.empty([self.size])
             self.buffer['o_next_%d' % i] = np.empty([self.size, self.args['obs_shape'][i]])
