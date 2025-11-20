@@ -1,4 +1,4 @@
-from algo_models.agents.agent import Agent
+from common.agent import Agent
 from common.replay_buffer import Buffer
 import os, datetime
 from tqdm import tqdm
