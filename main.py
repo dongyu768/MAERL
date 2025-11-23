@@ -8,8 +8,8 @@ project_root = os.path.dirname(os.path.abspath(__file__))
 os.chdir(project_root)
 sys.path.append(project_root)
 from utils import *
-from envs.env_wrapper import make_env
-from runner import Runner
+from envs.env_utils import make_env
+from algo_models.maddpg.runner import Runner
 
 
 def main():
@@ -22,7 +22,7 @@ def main():
     torch.manual_seed(args['seed'])
     torch.backends.cudnn.deterministic = args['torch_deterministic']
     # 根据训练场景和训练时间定义保存路径
-    result_path = f"{args['base_path']}/{args['scenario_name']}-{datetime.datetime.now().strftime(f'%Y%m%d-%H%M')}"
+    result_path = f"{args['base_path']}/{args['env_name']}/{args['scenario_name']}-{datetime.datetime.now().strftime(f'%Y%m%d-%H%M')}"
     log_dir = f"{result_path}/summary"
     save_dir = f"{result_path}/models"
     if not os.path.exists(log_dir):

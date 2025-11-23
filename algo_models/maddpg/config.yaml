@@ -1,0 +1,51 @@
+config:
+  device: 'cuda:3'
+  # 环境参数
+  env_name: 'multiparticles'
+  scenario_name: 'simple_adversary'
+  max_episode_len: 25
+  time_steps: 1000000    # 1e6
+  random_steps: 500 
+  gui: false
+  evaluate: false
+  continuous_actions: False
+  # 训练通用参数
+  epsilon: 0.2
+  gamma: 0.95
+  tau: 0.01
+  batch_size: 256
+  buffer_size: 500000
+  use_priority: false
+  use_normalize: false
+  seed: 20
+  anneal_lr: false
+  torch_deterministic: False
+  use_public_buffer: True
+  # 日志参数
+  base_path: "results"
+  save_rate: 20000  # 保存模型频率
+  log_interval: 100
+  save_interval: 2000  # 绘制损失频率
+  save_vedio: False
+  learn_interval: 10
+  # 评估参数
+  evaluate_episodes: 50
+  evaluate_episode_len: 25
+  evaluate: False
+  evaluate_rate: 1000
+  demo_length: 100
+  # MPE环境参数
+  num_good: 1
+  num_adversaries: 1
+  num_obstacles: 0
+  num_food: 2
+  num_forests: 2
+  # 算法参数
+  lr_actor: 0.0001
+  lr_critic: 0.001
+  noise_rate: 0.1
+  exploration_decay: 0.9999
+  policy_noise: 0.2
+  noise_clip: 0.5
+  policy_freq: 2
+  ensemble_k: 2
