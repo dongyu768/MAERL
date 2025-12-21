@@ -1,0 +1,30 @@
+# 算法参数
+hidden_size: 100
+lr_actor: 5.0e-5
+lr_critic: 1.0e-5
+tau: 1.0e-5
+init_w: True
+gradperstep: 1.0
+gamma: 0.5
+batch_size: 512
+buffer_size: 100000
+reward_scaling: 10.0
+# 进化算法参数
+env_choice: 'rover_tight'     #['motivate', 'rover_tight']
+popn_size: 10
+rollsize: 0
+is_matd3: false
+is_maddpg: false
+frames: 2
+crossover_prob: 0.1
+mutation_prob: 0.9
+extinction_prob: 0.005  # Probability of extinction event
+extinction_magnitude: 0.5  # Probabilty of extinction for each genome, given an extinction event
+weight_clamp: 1000000
+mut_distribution: 1  # 1-Gaussian, 2-Laplace, 3-Uniform
+num_elites: 4
+# 其他
+action_dim: 2
+num_test: 10
+test_gap: 5
+rollout_size: 0

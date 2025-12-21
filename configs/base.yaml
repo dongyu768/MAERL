@@ -1,0 +1,22 @@
+# -------device---------
+device: 'cuda:2'
+cuda: True
+torch_deterministic: True
+torch_threads: 64
+# -------seed-------
+seed: 20
+seed_specify: true
+# -------train-------
+warmup_steps: 500
+# -------eval-------
+eval_episodes: 50
+eval_episode_len: 25
+use_eval: False
+eval_interval: 10000
+# -------log-------
+base_path: "results"
+save_interval: 20000  # 保存模型频率
+log_interval: 1000
+save_vedio: False
+learn_interval: 10
+save_model: False

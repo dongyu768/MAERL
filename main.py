@@ -4,37 +4,40 @@ import time
 import datetime
 import random
 import numpy as np
+import argparse
 project_root = os.path.dirname(os.path.abspath(__file__))
 os.chdir(project_root)
 sys.path.append(project_root)
-from utils import *
-from envs.env_utils import make_env
-from algo_models.maddpg.runner import Runner
-
+from utils.env_tools import make_env, set_seed
+from utils.config_tools import get_defaults_yaml_args, init_dir
+from runners.runner import Runner
+from runners.maerl_runner import MAERLRunner
 
 def main():
-    # 获得全局配置参数
-    config = load_config()
-    args = config['config']
+    # 加载配置参数
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--algo_name", type=str, default="maerl",help="")
+    parser.add_argument("--env_name", type=str, default="mpe",help="")
+    parser.add_argument("--device", type=str, default="cuda:2",help="")
+    par_args = parser.parse_args()
+    
+    base_args, algo_args, env_args = get_defaults_yaml_args(par_args.algo_name, par_args.env_name)
+    args = {}
+    args.update(base_args);args.update(algo_args);args.update(env_args)
+    args.update(vars(par_args))
+
     # 设置随机种子
-    random.seed(args['seed'])
-    np.random.seed(args['seed'])
-    torch.manual_seed(args['seed'])
-    torch.backends.cudnn.deterministic = args['torch_deterministic']
-    # 根据训练场景和训练时间定义保存路径
-    result_path = f"{args['base_path']}/{args['env_name']}/{args['scenario_name']}-{datetime.datetime.now().strftime(f'%Y%m%d-%H%M')}"
-    log_dir = f"{result_path}/summary"
-    save_dir = f"{result_path}/models"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    args['log_dir'] = log_dir
-    args['save_dir'] = save_dir
+    set_seed(args)
+    # 初始化目录
+    args = init_dir(args)
     
     # 构建环境
     env, args = make_env(args)
     # 训练模型
+    if args['algo_name'].lower() in ['maerl', 'merl']:
+        runner = MAERLRunner(args, env)
+    else:
+        runner = Runner(args, env)
     runner = Runner(args, env)
     # 评估和训练
     start_time = time.time()
@@ -45,8 +48,6 @@ def main():
     end_time = time.time()
     training_time = end_time - start_time
     print(f"training duration: {training_time}")
-    # TODO 增加保存当次训练参数模块
-    # TODO 增加checkpoint断点保存模型功能，方便中断后继续训练
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,4 @@
+env_name: 'rover_domain' 
+  scenario_name: 'none'
+  num_agents: 2
+  state_dim: 10
