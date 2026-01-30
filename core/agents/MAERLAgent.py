@@ -103,6 +103,51 @@ class MAERLAgent(BaseAgent):
         # best_idx = np.argmax(fitness_list)
         # utils.hard_update(self.rl_agent.actor_network, self.population[best_idx])
 
+    def save(self):
+        """
+        Save actor/critic of this agent to:
+          {model_dir}/agent_{agent_id}/actor.pth
+          {model_dir}/agent_{agent_id}/critic.pth
+        """
+        agent_dir = os.path.join(self.args['save_dir'], self.agent_name)
+        os.makedirs(agent_dir, exist_ok=True)
+
+        actor_path = os.path.join(agent_dir, "actor.pth")
+        critic_path = os.path.join(agent_dir, "critic.pth")
+
+        # 只保存权重，保持与旧产物一致
+        torch.save(self.policy.actor_network.state_dict(), actor_path)
+        torch.save(self.policy.critic_network.state_dict(), critic_path)
+
+    def load(self, model_dir):
+        """
+        Load actor/critic weights from:
+          {model_dir}/agent_{agent_id}/actor.pth
+          {model_dir}/agent_{agent_id}/critic.pth
+        """
+        agent_dir = os.path.join(model_dir, self.agent_name)
+        actor_path = os.path.join(agent_dir, "actor.pth")
+        critic_path = os.path.join(agent_dir, "critic.pth")
+
+        # 先加载到 CPU 以避免跨设备问题，随后再迁移到目标 device
+        actor_sd = torch.load(actor_path, map_location="cpu")
+        critic_sd = torch.load(critic_path, map_location="cpu")
+
+        self.policy.actor_network.load_state_dict(actor_sd,strict=True)
+        self.policy.critic_network.load_state_dict(critic_sd,strict=True)
+        self.policy.actor_target_network.load_state_dict(actor_sd,strict=True)
+        self.policy.critic_target_network.load_state_dict(critic_sd,strict=True)
+
+        if self.args['device'] is not None:
+            self.policy.actor_network.to(self.args['device'])
+            self.policy.critic_network.to(self.args['device'])
+            self.policy.actor_target_network.to(self.args['device'])
+            self.policy.critic_target_network.to(self.args['device'])
+
+        # 评估时默认 eval 模式
+        self.policy.actor_network.eval()
+        self.policy.critic_network.eval()
+
     def save_model(self, save_path, episode):
         """
         保存模型。主要保存 RL Agent 的参数，因为它是最终输出的策略。

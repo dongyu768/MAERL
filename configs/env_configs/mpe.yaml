@@ -1,12 +1,11 @@
-# -------env-------
-scenario_name: 'simple_push'
-max_episode_len: 25
+# -------pursuit_evasion env-------
+scenario_name: 'pursuit_evasion'
+max_episode_len: 100
 time_steps: 1000000    # 1e6
 random_steps: 500 
 gui: false
 continuous_actions: false
-num_good: 2
-num_adversaries: 1
-# num_obstacles: 0
-# num_food: 2
-# num_forests: 2
+num_good: 5
+num_adversary: 1
+num_obstacle: 10
+num_goal: 2

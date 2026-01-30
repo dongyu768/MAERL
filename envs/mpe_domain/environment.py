@@ -3,6 +3,8 @@ from gym import spaces
 from gym.envs.registration import EnvSpec
 import numpy as np
 from envs.mpe_domain.multi_discrete import MultiDiscrete
+import torch
+from torch.distributions import Categorical, Normal
 
 # environment for all agents in the multiagent world
 # currently code assumes that no agents will be created/destroyed at runtime!
@@ -231,7 +233,7 @@ class MultiAgentEnv(gym.Env):
             if self.viewers[i] is None:
                 # import rendering only if we need it (and don't import for headless machines)
                 # from gym.envs.classic_control import rendering
-                from mpe_domain import rendering
+                from envs.mpe_domain import rendering
                 self.viewers[i] = rendering.Viewer(700,700)
 
         # create rendering geometry
@@ -275,6 +277,73 @@ class MultiAgentEnv(gym.Env):
             results.append(self.viewers[i].render(return_rgb_array = mode=='rgb_array'))
 
         return results
+    
+
+    def sample(self):
+        """
+        为并行 MultiAgentEnv 采样一个 joint action（action_n）
+        - 返回: action_n (list), len == self.n
+        - 兼容: Discrete / Box / Tuple / MultiDiscrete
+        - 对 MultiDiscrete: 返回拼接后的 one-hot 向量（符合 _set_action 的切片逻辑）
+        """
+        action_n = []
+        for i, agent in enumerate(self.agents):
+            # a = self._sample_from_space(self.action_space[i])
+            a = [0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0]
+            action_n.append(a)
+        return action_n
+
+
+    def _sample_from_space(self, space):
+        """
+        从任意 gym space 采样，并对 MultiDiscrete 做 one-hot 展开，
+        以匹配当前 _set_action 对 MultiDiscrete 的解析方式。
+        """
+        # 1) 你的 MultiDiscrete（来自 mpe_domain.multi_discrete）
+        if isinstance(space, MultiDiscrete):
+            # space.low/high 是每个维度的取值范围（如 [0, n-1]）
+            # 这里采样每个维度一个离散值，然后展开成拼接 one-hot
+            # 注意：你的 MultiDiscrete 构造是 [[0, n-1], [0, m-1], ...]
+            # 所以每一维的 size = high - low + 1
+            sizes = (space.high - space.low + 1).astype(int)
+
+            # 采样每一维的离散值（落在 [low, high]）
+            # 用 numpy 的方式确保类型一致
+            choices = []
+            for dim, size in enumerate(sizes):
+                low = int(space.low[dim]) if hasattr(space, "low") else 0
+                high = int(space.high[dim])
+                choices.append(np.random.randint(low, high + 1))
+
+            # 展开成拼接 one-hot（与你 _set_action 里切片逻辑一致）
+            onehot = np.zeros(int(np.sum(sizes)), dtype=np.float32)
+            idx = 0
+            for dim, size in enumerate(sizes):
+                val = int(choices[dim]) - (int(space.low[dim]) if hasattr(space, "low") else 0)
+                onehot[idx + val] = 1.0
+                idx += int(size)
+
+            return onehot
+
+        # 2) gym.spaces.Tuple：逐个子空间采样
+        if isinstance(space, spaces.Tuple):
+            return tuple(self._sample_from_space(s) for s in space.spaces)
+
+        # 3) gym.spaces.Discrete：返回 int
+        if isinstance(space, spaces.Discrete):
+            return int(space.sample())
+
+        # 4) gym.spaces.Box：返回 np.ndarray
+        if isinstance(space, spaces.Box):
+            a = space.sample()
+            return a.astype(np.float32, copy=False)
+
+        # 5) 兜底：能 sample 就 sample，否则报错
+        if hasattr(space, "sample"):
+            return space.sample()
+
+        raise NotImplementedError(f"Unsupported action space type: {type(space)}")
+
 
     def get_shape(self, input_space):
         """

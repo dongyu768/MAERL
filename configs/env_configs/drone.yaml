@@ -1,0 +1,8 @@
+# -------env-------
+scenario_name: 'MultiPEAviary'  # MultiHoverAviary MultiSearchAviary
+max_episode_len: 200
+time_steps: 1000    # 1e6
+random_steps: 500 
+gui: false
+continuous_actions: true
+n_agents: 2

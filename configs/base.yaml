@@ -17,6 +17,6 @@ eval_interval: 10000
 base_path: "results"
 save_interval: 20000  # 保存模型频率
 log_interval: 1000
-save_vedio: False
+save_vedio: True
 learn_interval: 10
 save_model: False

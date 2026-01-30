@@ -14,13 +14,14 @@ from runners.runner import Runner
 from runners.maerl_runner import MAERLRunner
 
 def main():
-    # 加载配置参数
+    # 配置参数
     parser = argparse.ArgumentParser()
-    parser.add_argument("--algo_name", type=str, default="maerl",help="")
-    parser.add_argument("--env_name", type=str, default="mpe",help="")
-    parser.add_argument("--device", type=str, default="cuda:2",help="")
+    parser.add_argument("--algo_name", type=str, default="maddpg",help="")
+    parser.add_argument("--env_name", type=str, default="mpe",help="")   # [mpe, drone]
+    parser.add_argument("--evaluate", type=bool, default=False ,help="")
+    parser.add_argument("--eval_path", type=str, default="results/drone/maddpg/MultiSearchAviary-20260109-2338",help="")
     par_args = parser.parse_args()
-    
+    # 加载参数
     base_args, algo_args, env_args = get_defaults_yaml_args(par_args.algo_name, par_args.env_name)
     args = {}
     args.update(base_args);args.update(algo_args);args.update(env_args)
@@ -29,7 +30,8 @@ def main():
     # 设置随机种子
     set_seed(args)
     # 初始化目录
-    args = init_dir(args)
+    if not args["evaluate"]:
+        args = init_dir(args)
     
     # 构建环境
     env, args = make_env(args)

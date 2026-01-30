@@ -30,8 +30,8 @@ def make_env(scenario_name, benchmark=False):
         .action_space       :   Returns the action space for each agent
         .n                  :   Returns the number of Agents
     """
-    from mpe_domain.environment import MultiAgentEnv
-    import mpe_domain.scenarios as scenarios
+    from envs.mpe_domain.environment import MultiAgentEnv
+    import envs.mpe_domain.scenarios as scenarios
 
     # load scenario from script
     scenario = scenarios.load(scenario_name + ".py").Scenario()

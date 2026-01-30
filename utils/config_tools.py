@@ -37,6 +37,10 @@ def init_dir(args):
     save_dir = os.path.join(result_path, "models")
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(save_dir, exist_ok=True)
+    if args['save_vedio']:
+        vedio_dir = os.path.join(result_path, "vedios")
+        os.makedirs(vedio_dir, exist_ok=True)
+        args['vedio_dir'] = vedio_dir
     args['log_dir'] = log_dir
     args['save_dir'] = save_dir
     return args

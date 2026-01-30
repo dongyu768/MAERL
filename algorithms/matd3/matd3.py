@@ -29,11 +29,11 @@ class MATD3:
         self.actor_optim = torch.optim.Adam(self.actor_network.parameters(), lr=config['lr_actor'])
         self.critic_optim = torch.optim.Adam(self.critic_network.parameters(), lr=config['lr_critic'])
 
-        self.model_path = self.config['save_dir']
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-        
-        self.writer = init_writter(self.config)
+        # self.model_path = self.config['save_dir']
+        # if not os.path.exists(self.model_path):
+        #     os.mkdir(self.model_path)
+        if not self.config['evaluate']:
+            self.writer = init_writter(self.config)
         
     def _hard_update(self, target, source):
         for target_param, param in zip(target.parameters(), source.parameters()):
@@ -102,8 +102,8 @@ class MATD3:
         self._soft_update(self.actor_target_network, self.actor_network)
         self._soft_update(self.critic_target_network, self.critic_network)
 
-        if self.train_step > 0 and self.train_step % self.config['save_interval'] == 0:
-            self.save_model(self.train_step)
+        # if self.train_step > 0 and self.train_step % self.config['save_interval'] == 0:
+        #     self.save_model(self.train_step)
         self.train_step += 1
         
         return critic_loss.item(), actor_loss.item()

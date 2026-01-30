@@ -21,29 +21,23 @@ class MADDPG:
         # create the optimizer
         self.actor_optim = torch.optim.Adam(self.actor_network.parameters(), lr=self.args['lr_actor'])
         self.critic_optim = torch.optim.Adam(self.critic_network.parameters(), lr=self.args['lr_critic'])
-        # create the dict for store the model
-        # if not os.path.exists(self.args['save_dir']):
-        #     os.makedirs(self.args['save_dir'])
+
         # path to save the model
-        self.model_path = self.args['save_dir']
-        # self.model_path = self.model_path + '/' + 'agent_%d' % agent_id
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-        # # load the model
-        # if os.path.exists(self.model_path + '/actor_params.pkl'):
-        #     self.actor_network.load_state_dict(torch.load(self.model_path + '/actor_params.pkl', map_location=self.device))
-        #     self.critic_network.load_state_dict(torch.load(self.model_path + '/critic_params.pkl', map_location=self.device))
-        #     print('Agent {} successfully loaded actor_network:{}'.format(self.agent_id, self.model_path + '/actor_params.pkl'))
-        #     print('Agent {} successfully loaded critic_network:{}'.format(self.agent_id, self.model_path + '/critic_params.pkl'))
-        self.writer = init_writter(args)
-    # soft update
+        # self.model_path = self.args['save_dir']
+        # # self.model_path = self.model_path + '/' + 'agent_%d' % agent_id
+        # if not os.path.exists(self.model_path):
+        #     os.mkdir(self.model_path)
+        if not self.args['evaluate']:
+            self.writer = init_writter(args)
+
     def _soft_update_target_network(self):
         for target_param, param in zip(self.actor_target_network.parameters(), self.actor_network.parameters()):
             target_param.data.copy_((1-self.args['tau']) * target_param.data + self.args['tau'] * param.data)
         for target_param, param in zip(self.critic_target_network.parameters(), self.critic_network.parameters()):
             target_param.data.copy_((1-self.args['tau']) * target_param.data + self.args['tau'] * param.data)
-    # update the network
+
     def train(self, transitions, other_agents):
+        # self.writer = init_writter(self.args)
         for key in transitions.keys():
             transitions[key] = torch.from_numpy(transitions[key]).float().to(self.device)
         r = transitions['r_%d' % self.agent_id] # 训练时只需要自己的reward
@@ -86,8 +80,8 @@ class MADDPG:
         self.critic_optim.step()
 
         self._soft_update_target_network()
-        if self.train_step > 0 and self.train_step % self.args['save_interval'] == 0:
-            self.save_model()
+        # if self.train_step > 0 and self.train_step % self.args['save_interval'] == 0:
+        #     self.save_model()
         self.train_step += 1
     def save_model(self):
         model_path = os.path.join(self.model_path, 'agent_%d' % self.agent_id)

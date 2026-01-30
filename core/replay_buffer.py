@@ -27,7 +27,7 @@ class Buffer:
             with self.lock:
                 self.buffer['o_%d' % i][idxs] = o[i]
                 self.buffer['u_%d' % i][idxs] = u[i]
-                self.buffer['r_%d' % i][idxs] = r[i]
+                self.buffer['r_%d' % i][idxs] = r
                 self.buffer['o_next_%d' % i][idxs] = o_next[i]
     def _get_storage_idx(self, inc=None):
         inc = inc or 1
