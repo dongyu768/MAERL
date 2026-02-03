@@ -10,24 +10,28 @@ class Scenario(BaseScenario):
         world.dim_c = 2
         num_agents = num_adversaries + num_good
         world.num_agents = num_agents
-        # num_adversaries = 1
-        # num_landmarks = 10
-        # num_goal = 2
         # add agents
         world.agents = [Agent() for i in range(num_agents)]
         for i, agent in enumerate(world.agents):
             agent.name = 'agent %d' % i
-            agent.collide = False
+            agent.collide = True  # 智能体不能碰撞
             agent.silent = True
-            agent.adversary = True if i < num_adversaries else False
-            agent.size = 0.15
+            agent.adversary = False if i < num_good else True
+            agent.size = 0.05
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
             landmark.name = 'landmark %d' % i
-            landmark.collide = False
+            landmark.collide = True   # 障碍物不可碰撞
             landmark.movable = False
-            landmark.size = 0.08
+            landmark.size = 0.02
+        # add target
+        world.targets = [Landmark() for i in range(num_goal)]
+        for i, target in enumerate(world.targets):
+            target.name = 'target %d' % i
+            target.collide = False   # 目标点非实体，可碰撞
+            target.movable = False
+            target.size = 0.02
         # make initial conditions
         self.reset_world(world)
         return world
@@ -40,11 +44,9 @@ class Scenario(BaseScenario):
         # random properties for landmarks
         for i, landmark in enumerate(world.landmarks):
             landmark.color = np.array([0.15, 0.15, 0.15])
-        # set goal landmark
-        goal = np.random.choice(world.landmarks)
-        goal.color = np.array([0.15, 0.65, 0.15])
-        for agent in world.agents:
-            agent.goal_a = goal
+        # random properties for targets
+        for i, target in enumerate(world.targets):
+            target.color = np.array([0.95, 0.95, 0.20])
         # set random initial states
         for agent in world.agents:
             agent.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
@@ -53,17 +55,25 @@ class Scenario(BaseScenario):
         for i, landmark in enumerate(world.landmarks):
             landmark.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
+        for i, target in enumerate(world.targets):
+            target.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
+            target.state.p_vel = np.zeros(world.dim_p)
     
     def benchmark_data(self, agent, world):
         # returns data for benchmarking purposes
+        def sqdist(a_pos, b_pos):
+            return np.sum(np.square(a_pos - b_pos))
+
         if agent.adversary:
-            return np.sum(np.square(agent.state.p_pos - agent.goal_a.state.p_pos))
+            # adversary: 离任意一个target最近的平方距离
+            return min([sqdist(agent.state.p_pos, t.state.p_pos) for t in world.targets])
         else:
-            dists = []
-            for l in world.landmarks:
-                dists.append(np.sum(np.square(agent.state.p_pos - l.state.p_pos)))
-            dists.append(np.sum(np.square(agent.state.p_pos - agent.goal_a.state.p_pos)))
-            return tuple(dists)
+            # good： 对每一个target，团队到该target的最近平方距离
+            goods = self.good_agents(world)
+            cover_sq_dists = []
+            for t in world.targets:
+                cover_sq_dists.append(min([sqdist(g.state.p_pos, t.state.p_pos) for g in goods]))
+            return tuple(cover_sq_dists)
     
     # return all agents that are not adversaries
     def good_agents(self, world):
@@ -82,50 +92,58 @@ class Scenario(BaseScenario):
         shaped_reward = True
         shaped_adv_reward = True
 
-        # Calculate negative reward for adversary
-        adversary_agents = self.adversaries(world)
-        if shaped_adv_reward:  # distance-based adversary reward
-            adv_rew = sum([np.sqrt(np.sum(np.square(a.state.p_pos - a.goal_a.state.p_pos))) for a in adversary_agents])
-        else:  # proximity-based adversary reward (binary)
-            adv_rew = 0
-            for a in adversary_agents:
-                if np.sqrt(np.sum(np.square(a.state.p_pos - a.goal_a.state.p_pos))) < 2 * a.goal_a.size:
-                    adv_rew -= 5
+        goods = self.good_agents(world)
+        adversaries = self.adversaries(world)
 
-        # Calculate positive reward for agents
-        good_agents = self.good_agents(world)
-        if shaped_reward:  # distance-based agent reward
-            pos_rew = -min(
-                [np.sqrt(np.sum(np.square(a.state.p_pos - a.goal_a.state.p_pos))) for a in good_agents])
-        else:  # proximity-based agent reward (binary)
-            pos_rew = 0
-            if min([np.sqrt(np.sum(np.square(a.state.p_pos - a.goal_a.state.p_pos))) for a in good_agents]) \
-                    < 2 * agent.goal_a.size:
-                pos_rew += 5
-            pos_rew -= min(
-                [np.sqrt(np.sum(np.square(a.state.p_pos - a.goal_a.state.p_pos))) for a in good_agents])
+        if shaped_reward:
+            cover_cost = 0.0
+            for t in world.targets:
+                cover_cost += min([np.sqrt(np.sum(np.square(g.state.p_pos - t.state.p_pos))) for g in goods])
+            pos_rew = -cover_cost
+        else:
+            # 所有target都被覆盖才给奖励
+            eps = 2 * world.targets[0].size
+            covered = True
+            for t in world.targets:
+                if min([np.sqrt(np.sum(np.square(g.state.p_pos - t.state.p_pos))) for g in goods]) > eps:
+                    covered = False
+                    break
+            pos_rew = 5.0 if covered else 0.0
+        
+        if shaped_adv_reward:
+            adv_rew = sum([min([np.sqrt(np.sum(np.square(a.state.p_pos - t.state.p_pos))) for t in world.targets]) for a in adversaries])
+        else:
+            eps = 2 * world.targets[0].size
+            covered = True
+            for t in world.targets:
+                if min([np.sqrt(np.sum(np.square(a.state.p_pos - t.state.p_pos))) for a in adversaries]) > eps:
+                    covered = False
+                    break
+            adv_rew = -5.0 if covered else 0.0
+        
         return pos_rew + adv_rew
     
     def adversary_reward(self, agent, world):
         # Rewarded based on proximity to the goal landmark
         shaped_reward = True
         if shaped_reward:  # distance-based reward
-            return -np.sum(np.square(agent.state.p_pos - agent.goal_a.state.p_pos))
+            return -min([np.sum(np.square(agent.state.p_pos - t.state.p_pos)) for t in world.targets])
         else:  # proximity-based reward (binary)
-            adv_rew = 0
-            if np.sqrt(np.sum(np.square(agent.state.p_pos - agent.goal_a.state.p_pos))) < 2 * agent.goal_a.size:
-                adv_rew += 5
-            return adv_rew
+            eps = 2 * world.targets[0].size
+            dmin = min([np.sqrt(np.sum(np.square(agent.state.p_pos - t.state.p_pos))) for t in world.targets])
+            return 5.0 if dmin < eps else 0.0
         
     def observation(self, agent, world):
         # get positions of all entities in this agent's reference frame
-        entity_pos = []
-        for entity in world.landmarks:
-            entity_pos.append(entity.state.p_pos - agent.state.p_pos)
+        target_pos = [t.state.p_pos - agent.state.p_pos for t in world.targets]
+
+        # target_color = [t.color for t in world.targets]
+
+        entity_pos = [l.state.p_pos - agent.state.p_pos for l in world.landmarks]
+
         # entity colors
-        entity_color = []
-        for entity in world.landmarks:
-            entity_color.append(entity.color)
+        # entity_color = [l.color for l in world.landmarks]
+
         # communication of all other agents
         other_pos = []
         for other in world.agents:
@@ -133,6 +151,10 @@ class Scenario(BaseScenario):
             other_pos.append(other.state.p_pos - agent.state.p_pos)
 
         if not agent.adversary:
-            return np.concatenate([agent.goal_a.state.p_pos - agent.state.p_pos] + entity_pos + other_pos)
+            return np.concatenate(target_pos + entity_pos + other_pos)
         else:
             return np.concatenate(entity_pos + other_pos)
+
+    def done(self, agent, world):
+        # 出界就结束（你也可以只对 good 判断）
+        return np.any(np.abs(agent.state.p_pos) > 1.0)

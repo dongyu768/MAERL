@@ -32,7 +32,7 @@ class Runner:
         self.evaluate_episode_len = args.get('evaluate_episode_len', self.episode_limit)
         self.log_interval = args.get('log_interval', 5_000)
         self.save_interval = args.get('save_interval', 50_000)
-        self.warmup_steps = args.get('warmup_steps', 0)  # 可选 warmup
+        self.warmup_steps = args.get('warmup_steps', 0)
 
         self.seed = args.get('seed', 1)
         self.device = args.get('device', 'cpu')
@@ -73,57 +73,48 @@ class Runner:
 
     def run(self):
         self.writer = init_writter(self.args)
-        
         start_time = time.time()
         self.total_step = 0
-
         if self.warmup_steps > 0:
             print(f"[Runner] Start warmup for {self.warmup_steps} steps...")
             self.warmup(self.warmup_steps)
             print("[Runner] Warmup finished, start training.")
 
-        s, _ = self.env.reset()
+        s = self.env.reset()
         episode_reward = 0.0
         episode_idx = 0
 
-        pbar = tqdm(range(self.time_steps), desc="Training", ncols=120)
-        for t in pbar:
+        # pbar = tqdm(range(self.time_steps), desc="Training", ncols=120)
+        for t in tqdm(range(self.time_steps)):
             self.total_step += 1
             actions, u = self.select_actions(s)
             for _ in range(self.n_agents, self.n_players):
-                # actions.append([0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0])
-                actions.append([np.random.rand() * 2 - 1, np.random.rand() * 2 - 1, np.random.rand() * 2 - 1, np.random.rand() * 2 - 1])
+                actions.append(self.env.sample())
 
             s_next, r, done, info = self.env.step(actions)
             # episode_reward += r[0]
-            episode_reward += r
+            good_reward = sum(r[:self.n_agents])
+            episode_reward += good_reward
 
-            self.store_transition(s, u, r, s_next)
+            self.store_transition(s, u, good_reward, s_next)
             s = s_next
 
             self.train()
 
-            if (t + 1) % self.episode_limit == 0:
+            if (t + 1) % self.episode_limit == 0 or any(done):
                 self.train_episode_rewards.append(episode_reward)
                 episode_idx += 1
                 episode_reward = 0.0
-                s, _ = self.env.reset()
+                s = self.env.reset()
 
             if self.total_step % self.evaluate_rate == 0:
-                eval_avg_reward = self.evaluate()
-                self.writer.add_scalar('eval/avg_reward', eval_avg_reward, self.eval_step)
+                eval_g_reward, eval_adv_reward = self.evaluate()
+                self.writer.add_scalar('eval/avg_good_reward', eval_g_reward, self.eval_step)
+                self.writer.add_scalar('eval/avg_adv_reward', eval_adv_reward, self.eval_step)
                 self.eval_step += 1
-                # self.console_log(
-                #     self.total_step,
-                #     eval_info={"eval_avg_reward": eval_avg_reward}
-                # )
             if self.total_step % self.log_interval == 0 and len(self.train_episode_rewards) > 0:
                 avg_train_rew = float(np.mean(self.train_episode_rewards[-10:]))
                 self.writer.add_scalar('train/avg_reward_10ep', avg_train_rew, self.total_step)
-                # self.console_log(
-                #     self.total_step,
-                #     train_info={"avg_train_reward_10ep": avg_train_rew}
-                # )
             if self.total_step % self.save_interval == 0:
                 self.save()
         total_time = str(datetime.timedelta(seconds=int(time.time() - start_time)))
@@ -135,12 +126,12 @@ class Runner:
         for _ in tqdm(range(warmup_steps), desc="Warmup", ncols=120):
             actions = []
             for _ in range(self.n_agents):
-                actions.append([0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0])
+                actions.append(self.env.sample())
             for _ in range(self.n_agents, self.n_players):
-                actions.append([0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0])
+                actions.append(self.env.sample())
 
             s_next, r, done, _ = self.env.step(actions)
-            self._store_transition(s, actions[:self.n_agents], r, s_next)
+            self.store_transition(s, actions[:self.n_agents], sum(r[:self.n_agents]), s_next)
             s = s_next
 
 
@@ -156,24 +147,14 @@ class Runner:
         return actions, u
 
     def store_transition(self, s, u, r, s_next):
-        """
-
-        """
         if self.use_public_buffer:
             # 只存前 n_agents 的信息
-            self.buffer.store_episode(
-                s[:self.n_agents], u, r, s_next[:self.n_agents]
-            )
+            self.buffer.store_episode(s[:self.n_agents], u, r, s_next[:self.n_agents])
         else:
             for i in range(self.n_agents):
-                self.buffer[i].store_episode(
-                    s[:self.n_agents], u, r, s_next[:self.n_agents]
-                )
+                self.buffer[i].store_episode(s[:self.n_agents], u, r, s_next[:self.n_agents])
 
     def train(self):
-        """
-        判断 buffer 是否足够，若足够则进行一次/多次训练
-        """
         if self.use_public_buffer:
             if self.buffer.current_size < self.batch_size:
                 return
@@ -193,19 +174,18 @@ class Runner:
                     agent.learn(transitions_t, other_agents)
 
     def evaluate(self):
-        """
-        多次评估 episode，返回平均回报
-        """
         if self.args.get("evaluate", False):
             model_dir = os.path.join(self.args["eval_path"], "models/")
             if not os.path.exists(model_dir):
                 raise FileNotFoundError(f"model dir not found: {model_dir}")
             for i in range(self.n_agents):
                 self.agents[i].load(str(model_dir))
-        returns = []
+        g_returns = []
+        a_returns = []
         for time_step in range(self.evaluate_episodes):
-            s, _ = self.env.reset()
-            rewards = 0.0
+            s = self.env.reset()
+            g_rewards = 0.0
+            adv_rewards = 0.0
             frames = []
             for _ in range(self.evaluate_episode_len):
                 actions = []
@@ -214,70 +194,36 @@ class Runner:
                         action = agent.select_action(s[agent_id], 0, 0)  # 无噪声，纯策略
                         actions.append(action)
                 for _ in range(self.n_agents, self.n_players):
-                    actions.append([0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0])
+                    actions.append(self.env.sample())
 
                 s_next, r, done, info = self.env.step(actions)
-                if time_step == self.config['evaluate_episodes']-1:
+                print(f'reward:{r}')
+                # if time_step == self.config['evaluate_episodes']-1:
+                if self.args.get("evaluate", False):
                     # 保存图片
-                    frame = self.env.render()
+                    frame = self.env.render(mode='rgb_array')
                     frames.append(frame)
-                rewards += r
+                good_reward = sum(r[:self.n_agents])
+                g_rewards += good_reward
+                adversary_reward = sum(r[self.n_agents:self.n_players])
+                adv_rewards += adversary_reward
                 s = s_next
-            if len(frames) > 0 and time_step == self.config['evaluate_episodes']-1:
+            # if len(frames) > 0 and time_step == self.config['evaluate_episodes']-1:
+            if self.args.get("evaluate", False):
                 self.save_vidio(frames)
-            returns.append(rewards)
-        return float(sum(returns) / len(returns))
+            g_returns.append(g_rewards)
+            a_returns.append(adv_rewards)
+        return float(sum(g_returns) / len(g_returns)), float(sum(a_returns) / len(a_returns))
 
     def save_vidio(self, frames):
         clip = ImageSequenceClip(frames, fps=30) 
         clip.write_videofile(self.args['vedio_dir'] + "record.mp4", codec="libx264")
 
-    def console_log(self, step, train_info=None, eval_info=None):
-        """
-        类似 world_model_runner.console_log：
-        - 打印到屏幕
-        - 写入 progress.txt
-        """
-        now = time.time()
-        header = (
-            f"\n******** step: {step}, "
-            f"elapsed: {now - self._last_log_time:.1f}s, "
-            f"total: {datetime.timedelta(seconds=int(now))} ********"
-        )
-        print(header)
-        self.log_file.write(header + "\n")
-
-        if train_info is not None:
-            line = "train_info: " + ", ".join(
-                [f"{k}: {v:.4f}" for k, v in train_info.items()]
-            )
-            print(line)
-            self.log_file.write(line + "\n")
-
-        if eval_info is not None:
-            line = "eval_info: " + ", ".join(
-                [f"{k}: {v:.4f}" for k, v in eval_info.items()]
-            )
-            print(line)
-            self.log_file.write(line + "\n")
-
-        self.log_file.flush()
-        self._last_log_time = now
-
     def save(self):
-        """
-        保存模型：
-        这里假设每个 Agent 有 save/load 方法，如果没有你可以先留空
-        """
-        # 可以根据需要添加 if not hasattr(agent, "save"): return
         for i, agent in enumerate(self.agents):
             if hasattr(agent, "save"):
                 agent.save()
 
     def close(self):
-        """
-        关闭环境与日志
-        """
         self.env.close()
         self.writer.close()
-        # self.log_file.close()

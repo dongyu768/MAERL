@@ -7,16 +7,18 @@ torch_threads: 64
 seed: 20
 seed_specify: true
 # -------train-------
-warmup_steps: 500
+warmup_steps: 0
+max_episode_len: 100
+time_steps: 300000    # 1e6
 # -------eval-------
 eval_episodes: 50
-eval_episode_len: 25
+eval_episode_len: 100
 use_eval: False
 eval_interval: 10000
 # -------log-------
 base_path: "results"
 save_interval: 20000  # 保存模型频率
 log_interval: 1000
-save_vedio: True
+save_vedio: False
 learn_interval: 10
 save_model: False

@@ -1,8 +1,5 @@
 # -------pursuit_evasion env-------
-scenario_name: 'pursuit_evasion'
-max_episode_len: 100
-time_steps: 1000000    # 1e6
-random_steps: 500 
+scenario_name: 'pursuit_evasion' 
 gui: false
 continuous_actions: false
 num_good: 5

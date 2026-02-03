@@ -7,6 +7,7 @@ sys.path.append(project_root)
 from utils.env_tools import make_env
 from utils.config_tools import get_defaults_yaml_args, init_dir
 from moviepy.editor import ImageSequenceClip
+# import imageio
 
 def main():
     # 配置参数
@@ -29,20 +30,29 @@ def main():
     env.reset()
 
     frames = []
-
+    # writer = imageio.get_writer("record.mp4",fps=30,codec="libx264")
     for t in range(100):
-        action_n = env.sample()  # joint action: list(len=n_agents)
+        action_n = []
+        for _ in range(args['n_players']):
+                action_n.append(env.sample())
         obs_n, reward_n, done_n, info_n = env.step(action_n)
+        print(f'========================{t}===========================')
+        # print(f'action:\n{action_n}\nobs:\n{obs_n}\nreward:{reward_n}\ndone:{done_n}')
         frame = env.render()
-        frames.append(frame)
+        frames = frames.append(frame)
+        # frame = frame[:, :, :3].astype(np.uint8)
+        # h, w, _ = frame.shape
+        # frame = frame[:h//2*2, :w//2*2]
+        # writer.append_data(frame)
 
         # done_n 是 list[bool]，一般用 any/all 判断
         if any(done_n):
             break
-    clip = ImageSequenceClip(frames, fps=30) 
+    clip = ImageSequenceClip(frames, fps=30)
     clip.write_videofile(args['vedio_dir'] + "record.mp4", codec="libx264")
 
     env.close()
+    # writer.close()
 
 
 if __name__ == "__main__":

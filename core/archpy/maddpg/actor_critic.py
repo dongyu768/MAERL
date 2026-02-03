@@ -24,7 +24,7 @@ class Critic(nn.Module):
     def __init__(self, args):
         super(Critic, self).__init__()
         self.max_action = args['high_action']
-        self.fc1 = nn.Linear(sum(args['obs_shape'])+sum(args['action_shape']), 256)
+        self.fc1 = nn.Linear(sum(args['obs_shape'][:args['n_agents']])+sum(args['action_shape'][:args['n_agents']]), 256)
         self.fc2 = nn.Linear(256, 256)
         self.fc3 = nn.Linear(256, 256)
         self.q_out = nn.Linear(256, 1)

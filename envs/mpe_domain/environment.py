@@ -110,8 +110,9 @@ class MultiAgentEnv(gym.Env):
 
         # all agents get total reward in cooperative case
         reward = np.sum(reward_n)
-        if self.shared_reward:
-            reward_n = [reward] * self.n
+        # if self.shared_reward:
+        #     reward_n = [reward] * self.n
+        #     print('share_reward')
 
         return obs_n, reward_n, done_n, info_n
 
@@ -226,8 +227,9 @@ class MultiAgentEnv(gym.Env):
                     else:
                         word = alphabet[np.argmax(other.state.c)]
                     message += (other.name + ' to ' + agent.name + ': ' + word + '   ')
-            print(message)
-
+            # print(message)
+        import os
+        os.environ.setdefault("PYGLET_HEADLESS", "true")
         for i in range(len(self.viewers)):
             # create viewers (if necessary)
             if self.viewers[i] is None:
@@ -240,7 +242,7 @@ class MultiAgentEnv(gym.Env):
         if self.render_geoms is None:
             # import rendering only if we need it (and don't import for headless machines)
             # from gym.envs.classic_control import rendering
-            from mpe_domain import rendering
+            from envs.mpe_domain import rendering
             self.render_geoms = []
             self.render_geoms_xform = []
             for entity in self.world.entities:
@@ -262,7 +264,7 @@ class MultiAgentEnv(gym.Env):
 
         results = []
         for i in range(len(self.viewers)):
-            from mpe_domain import rendering
+            from envs.mpe_domain import rendering
             # update bounds to center around agent
             cam_range = 1
             if self.shared_viewer:
@@ -286,12 +288,13 @@ class MultiAgentEnv(gym.Env):
         - 兼容: Discrete / Box / Tuple / MultiDiscrete
         - 对 MultiDiscrete: 返回拼接后的 one-hot 向量（符合 _set_action 的切片逻辑）
         """
-        action_n = []
-        for i, agent in enumerate(self.agents):
-            # a = self._sample_from_space(self.action_space[i])
-            a = [0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0]
-            action_n.append(a)
-        return action_n
+        # action_n = []
+        # for i, agent in enumerate(self.agents):
+        #     # a = self._sample_from_space(self.action_space[i])
+        #     a = [0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0]
+        #     action_n.append(a)
+        a = [0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0]
+        return a
 
 
     def _sample_from_space(self, space):

@@ -40,7 +40,7 @@ def main():
         runner = MAERLRunner(args, env)
     else:
         runner = Runner(args, env)
-    runner = Runner(args, env)
+    # runner = Runner(args, env)
     # 评估和训练
     start_time = time.time()
     if args.get('evaluate', False):

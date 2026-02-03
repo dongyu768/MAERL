@@ -54,7 +54,7 @@ def make_env(args):
         # create world
         world = scenario.make_world(args['num_good'], args['num_adversary'], args['num_obstacle'], args['num_goal'])
         # create multiagent environment
-        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation)
+        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, done_callback=scenario.done)
         args['n_players'] = env.n # 包含敌人的所有玩家个数
         args['n_agents'] = env.n - args['num_adversary'] # 需要控制的玩家个数
         # args['obs_shape'] = [env.observation_space[i].shape[0] for i in range(args['n_agents'])] # 每一维代表该agent的obs维度
